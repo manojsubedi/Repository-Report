@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMEBiz Repository Branch Report</title>
+    <style>
+        @page { size: landscape; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Helvetica, Arial, sans-serif; background: #e8e8e8; color: #000; line-height: 1.4; padding-top: 44px; }
+        .page { width: 297mm; min-height: 210mm; margin: 16px auto; background: white; padding: 14px 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); position: relative; overflow: hidden; }
+        .report-title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+        .report-meta { text-align: center; font-size: 11px; color: #444; margin-bottom: 12px; }
+        .refresh-bar { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #29417a, #1a2a5e); color: white; padding: 8px 24px; display: flex; justify-content: space-between; align-items: center; z-index: 100; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .refresh-bar .left { font-weight: bold; }
+        .refresh-bar .right { display: flex; gap: 10px; align-items: center; }
+        .btn-refresh { padding: 5px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; background: #fff; color: #29417a; }
+        .btn-refresh:hover { background: #dde3f0; }
+        .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+        .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #historySelect { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
+        #historySelect option { background: #29417a; color: white; }
+        .section-title { font-size: 14px; font-weight: bold; margin: 10px 0 6px 0; }
+        .summary-boxes { display: flex; gap: 0; margin-bottom: 4px; }
+        .summary-box { width: 150px; height: 50px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; margin-right: 14px; }
+        .summary-box.blue { background: rgb(41,65,122); }
+        .summary-box.green { background: rgb(46,139,87); }
+        .summary-box.red { background: rgb(178,34,34); }
+        .summary-box.teal { background: rgb(0,128,128); }
+        .summary-box.brown { background: rgb(139,69,19); }
+        .summary-labels { display: flex; gap: 0; margin-bottom: 16px; }
+        .summary-label { width: 150px; text-align: center; font-size: 9px; color: #000; margin-right: 14px; }
+        .activity-row { display: flex; gap: 6px; margin-bottom: 6px; }
+        .activity-pill { display: inline-block; padding: 4px 16px; color: white; font-size: 11px; text-align: center; min-width: 100px; }
+        .activity-pill.ap-active { background: rgb(46,139,87); }
+        .activity-pill.ap-moderate { background: rgb(184,134,11); }
+        .activity-pill.ap-stale { background: rgb(205,133,63); }
+        .activity-pill.ap-inactive { background: rgb(178,34,34); }
+        .activity-legend { font-size: 9px; font-style: italic; color: #444; margin-bottom: 14px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; }
+        th { background: rgb(41,65,122); color: white; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 0.5px solid #1a2a5e; }
+        td { padding: 3px 3px; border: 0.5px solid #ccc; font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        tr.alt td { background: rgb(245,245,255); }
+        .code-yes { background: rgb(220,240,220) !important; }
+        .code-no { background: rgb(255,220,220) !important; }
+        .act-active { background: rgb(46,139,87) !important; color: white; text-align: center; }
+        .act-moderate { background: rgb(184,134,11) !important; color: white; text-align: center; }
+        .act-stale { background: rgb(205,133,63) !important; color: white; text-align: center; }
+        .act-inactive { background: rgb(178,34,34) !important; color: white; text-align: center; }
+        .usage-inuse { background: rgb(220,240,220) !important; text-align: center; }
+        .usage-notinuse { background: rgb(255,200,200) !important; text-align: center; }
+        .detail-table th:nth-child(1),.detail-table td:nth-child(1){width:3%}
+        .detail-table th:nth-child(2),.detail-table td:nth-child(2){width:18%;text-align:left}
+        .detail-table th:nth-child(3),.detail-table td:nth-child(3){width:14%;text-align:left}
+        .detail-table th:nth-child(4),.detail-table td:nth-child(4){width:4%}
+        .detail-table th:nth-child(5),.detail-table td:nth-child(5){width:4%}
+        .detail-table th:nth-child(6),.detail-table td:nth-child(6){width:8%}
+        .detail-table th:nth-child(7),.detail-table td:nth-child(7){width:16%;text-align:left}
+        .detail-table th:nth-child(8),.detail-table td:nth-child(8){width:5%}
+        .detail-table th:nth-child(9),.detail-table td:nth-child(9){width:5%}
+        .detail-table th:nth-child(10),.detail-table td:nth-child(10){width:6%}
+        .detail-table th:nth-child(11),.detail-table td:nth-child(11){width:7%}
+        .empty-main-table { width: 400px; }
+        .legend { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 9px; }
+        .legend-box { width: 20px; height: 14px; border: 0.5px solid #ccc; display: inline-block; }
+        .legend-box.has-code { background: rgb(220,240,220); }
+        .legend-box.no-code { background: rgb(255,220,220); }
+        .legend-pill { display: inline-block; padding: 1px 8px; color: white; font-size: 8px; }
+        .legend-note { font-size: 9px; font-style: italic; color: #444; margin-top: 4px; }
+        .rec-num { display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; color: white; font-weight: bold; font-size: 12px; margin-right: 8px; }
+        .rec-num.high{background:rgb(178,34,34)} .rec-num.medium{background:rgb(184,134,11)} .rec-num.low{background:rgb(46,139,87)} .rec-num.ongoing{background:rgb(41,65,122)}
+        .rec-section { margin-bottom: 14px; }
+        .rec-header { display: flex; align-items: center; margin-bottom: 2px; }
+        .rec-title { font-weight: bold; font-size: 12px; }
+        .priority-badge { font-size: 9px; padding: 1px 8px; color: white; margin-left: 4px; display: inline-block; }
+        .priority-badge.high{background:rgb(178,34,34)} .priority-badge.medium{background:rgb(184,134,11)} .priority-badge.low{background:rgb(46,139,87)} .priority-badge.ongoing{background:rgb(41,65,122)}
+        .rec-body { font-size: 10px; margin-left: 32px; margin-top: 2px; }
+        .rec-body ul { margin-top: 2px; padding-left: 14px; }
+        .rec-body li { font-size: 9.5px; color: #333; margin-bottom: 1px; }
+        .rec-desc { font-size: 10px; margin-left: 32px; }
+        .rec-sub { font-size: 9px; color: rgb(80,80,80); margin-left: 46px; }
+        .page-footer { text-align: center; font-size: 10px; font-style: italic; color: #666; margin-top: 10px; padding-top: 6px; border-top: 0.5px solid #ccc; }
+        .filter-bar { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .search-input { padding: 4px 10px; border: 1px solid #ccc; font-size: 10px; width: 200px; outline: none; }
+        .search-input:focus { border-color: #29417a; }
+        .filter-btn { padding: 3px 10px; border: 1px solid #ccc; background: white; font-size: 9px; cursor: pointer; }
+        .filter-btn:hover,.filter-btn.active { background: #29417a; color: white; border-color: #29417a; }
+        .week-chip { background: rgb(220,240,220); border: 0.5px solid #aad4aa; padding: 2px 10px; font-size: 9px; border-radius: 3px; display: inline-block; margin: 2px; }
+        .loading { text-align: center; padding: 80px; font-size: 16px; color: #29417a; }
+        .loading .spin-big { width: 40px; height: 40px; border: 4px solid #e0e4ec; border-top-color: #29417a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+        .period-tabs { display: flex; gap: 2px; margin-bottom: 10px; background: #e8e8e8; padding: 3px; border-radius: 6px; width: fit-content; }
+        .period-tab { padding: 6px 20px; border: none; background: transparent; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; color: #666; }
+        .period-tab:hover { color: #29417a; background: #fff; }
+        .period-tab.active { background: #29417a; color: white; }
+        .daily-row { display: flex; align-items: center; margin-bottom: 2px; }
+        .daily-date { width: 75px; font-size: 8.5px; color: #444; text-align: right; padding-right: 8px; font-family: monospace; }
+        .daily-bar { background: rgb(46,139,87); height: 14px; color: white; font-size: 8px; line-height: 14px; padding: 0 4px; border-radius: 0 3px 3px 0; min-width: 20px; text-align: right; }
+        .daily-bar.month-bar { background: rgb(41,65,122); }
+        /* Clickable elements */
+        .clickable { cursor: pointer; transition: all 0.15s; }
+        .clickable:hover { opacity: 0.85; transform: scale(1.03); }
+        .activity-pill.clickable:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+        .week-chip.clickable:hover { background: rgb(180,225,180) !important; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+        .author-link { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; color: #29417a; }
+        .author-link:hover { color: #1a2a5e; text-decoration-style: solid; }
+        /* Detail panel */
+        .detail-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 200; animation: fadeIn 0.2s; }
+        .detail-overlay.open { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .detail-panel { position: fixed; top: 0; right: 0; width: 750px; max-width: 90vw; height: 100vh; background: white; z-index: 201; box-shadow: -4px 0 20px rgba(0,0,0,0.2); overflow-y: auto; transform: translateX(100%); transition: transform 0.25s ease; }
+        .detail-panel.open { transform: translateX(0); }
+        .panel-header { position: sticky; top: 0; background: rgb(41,65,122); color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
+        .panel-header h3 { font-size: 15px; font-weight: 700; }
+        .panel-close { background: none; border: none; color: white; font-size: 22px; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+        .panel-close:hover { background: rgba(255,255,255,0.2); }
+        .panel-body { padding: 16px 20px; }
+        .panel-body .section-title { font-size: 13px; margin: 12px 0 6px 0; }
+        .panel-body table { font-size: 9px; }
+        .panel-body th { font-size: 8.5px; padding: 4px 4px; }
+        .panel-body td { font-size: 8.5px; padding: 3px 4px; }
+        .panel-stat-row { display: flex; gap: 12px; margin-bottom: 12px; }
+        .panel-stat { background: #f4f6fa; border-radius: 6px; padding: 10px 16px; text-align: center; min-width: 100px; }
+        .panel-stat .pval { font-size: 22px; font-weight: 800; color: #29417a; }
+        .panel-stat .plbl { font-size: 9px; color: #666; text-transform: uppercase; }
+        @media print { body { padding-top: 0; background: white; } .refresh-bar,.filter-bar,.detail-overlay,.detail-panel { display: none !important; } .page { box-shadow: none; margin: 0; width: 100%; } }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+<!-- Detail Panel -->
+<div class="detail-overlay" id="detailOverlay" onclick="closePanel()"></div>
+<div class="detail-panel" id="detailPanel">
+    <div class="panel-header">
+        <h3 id="panelTitle">Details</h3>
+        <button class="panel-close" onclick="closePanel()">&times;</button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+</div>
+
+<div class="refresh-bar">
+    <div class="left">GMEBiz Repository Branch Report</div>
+    <div class="right">
+        <label style="font-size:11px;margin-right:2px;">Report Date:</label>
+        <input type="date" id="reportDatePicker" onchange="loadHistory(this.value)" style="padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer;color:#29417a;font-weight:600;">
+        <button onclick="loadHistory('')" style="padding:3px 10px;border:none;border-radius:4px;font-size:10px;cursor:pointer;background:rgba(255,255,255,0.2);color:#fff;font-weight:600;">Latest</button>
+        <span id="lastGen" style="font-size:11px;"></span>
+        <div class="spinner" id="spinner"></div>
+        <button class="btn-refresh" onclick="downloadPDF()" style="background:#2e8b57;color:#fff;">&#11015; Download PDF</button>
+        <button class="btn-refresh" id="refreshBtn" onclick="refreshReport()">Refresh Now</button>
+    </div>
+</div>
+
+<div id="app"><div class="page"><div class="loading"><div class="spin-big"></div>Loading report data...</div></div></div>
+
+<script>
+let report = null;
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+/* ====== PANEL ====== */
+function openPanel(title, bodyHtml) {
+    document.getElementById('panelTitle').textContent = title;
+    document.getElementById('panelBody').innerHTML = bodyHtml;
+    document.getElementById('detailOverlay').classList.add('open');
+    document.getElementById('detailPanel').classList.add('open');
+}
+function closePanel() {
+    document.getElementById('detailOverlay').classList.remove('open');
+    document.getElementById('detailPanel').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
+
+/* ====== SHOW ACTIVITY LIST ====== */
+function showActivityList(activity) {
+    const colors = {Active:'rgb(46,139,87)',Moderate:'rgb(184,134,11)',Stale:'rgb(205,133,63)',Inactive:'rgb(178,34,34)'};
+    const descs = {Active:'< 30 days since last commit',Moderate:'30-90 days',Stale:'90-180 days',Inactive:'> 180 days'};
+    let repos = [];
+    report.repos.forEach(r => {
+        r.branches.forEach(b => {
+            if (b.has_code === 'YES' && b.activity === activity)
+                repos.push({repo:r.name, branch:b.name, last_date:b.last_date, author:b.last_author, commits:b.commits, usage:r.usage});
+        });
+    });
+    let h = `<div style="background:${colors[activity]};color:white;padding:8px 14px;border-radius:6px;margin-bottom:12px;font-size:13px;font-weight:600;">${activity} Branches - ${descs[activity]}</div>`;
+    h += `<div class="panel-stat-row"><div class="panel-stat"><div class="pval">${repos.length}</div><div class="plbl">Branches</div></div><div class="panel-stat"><div class="pval">${new Set(repos.map(r=>r.repo)).size}</div><div class="plbl">Repos</div></div></div>`;
+    h += '<table><thead><tr><th style="text-align:left;">Repository</th><th style="text-align:left;">Branch</th><th>Last Commit</th><th style="text-align:left;">Author</th><th>Commits</th><th>Usage</th></tr></thead><tbody>';
+    repos.forEach((r,i) => {
+        h += `<tr class="${i%2?'alt':''}"><td><span class="author-link" onclick="showRepoDetail('${esc(r.repo)}')">${esc(r.repo)}</span></td><td>${esc(r.branch)}</td><td style="text-align:center;">${esc(r.last_date)}</td><td><span class="author-link" onclick="showAuthorCommits('${esc(r.author)}','month')">${esc(r.author)}</span></td><td style="text-align:center;">${esc(r.commits)}</td><td style="text-align:center;background:${r.usage==='In Use'?'rgb(220,240,220)':'rgb(255,200,200)'};">${r.usage}</td></tr>`;
+    });
+    h += '</tbody></table>';
+    openPanel(activity + ' Branches (' + repos.length + ')', h);
+}
+
+/* ====== SHOW REPO DETAIL ====== */
+function showRepoDetail(repoName) {
+    const repo = report.repos.find(r => r.name === repoName);
+    if (!repo) { openPanel(repoName, '<p>Repo not found.</p>'); return; }
+    const codeBranches = repo.branches.filter(b => b.has_code === 'YES');
+    const totalCommits = repo.branches.reduce((s,b) => s + parseInt(b.commits||0), 0);
+    let h = `<div class="panel-stat-row"><div class="panel-stat"><div class="pval">${repo.branches.length}</div><div class="plbl">Branches</div></div><div class="panel-stat"><div class="pval">${codeBranches.length}</div><div class="plbl">With Code</div></div><div class="panel-stat"><div class="pval">${totalCommits}</div><div class="plbl">Total Commits</div></div><div class="panel-stat"><div class="pval" style="font-size:14px;color:${repo.usage==='In Use'?'rgb(46,139,87)':'rgb(178,34,34)'};">${repo.usage}</div><div class="plbl">Status</div></div></div>`;
+    h += '<div class="section-title">Branches</div><table><thead><tr><th style="text-align:left;">Branch</th><th>Files</th><th>Code?</th><th>Last Commit</th><th style="text-align:left;">Author</th><th>Commits</th><th>Port</th><th>Activity</th></tr></thead><tbody>';
+    repo.branches.forEach((b,i) => {
+        h += `<tr class="${i%2?'alt':''}"><td class="${b.has_code==='YES'?'code-yes':'code-no'}" style="text-align:left;">${esc(b.name)}</td><td class="${b.has_code==='YES'?'code-yes':'code-no'}" style="text-align:center;">${b.files}</td><td class="${b.has_code==='YES'?'code-yes':'code-no'}" style="text-align:center;">${b.has_code}</td><td style="text-align:center;">${esc(b.last_date)}</td><td><span class="author-link" onclick="showAuthorCommits('${esc(b.last_author)}','month')">${esc(b.last_author)}</span></td><td style="text-align:center;">${esc(b.commits)}</td><td style="text-align:center;">${esc(b.port)}</td><td class="act-${b.activity.toLowerCase()}">${b.activity}</td></tr>`;
+    });
+    h += '</tbody></table>';
+    const repoCommits = report.last_month.commits.filter(c => c.repo === repoName);
+    if (repoCommits.length) {
+        h += `<div class="section-title">Recent Commits (Last 30 Days) - ${repoCommits.length} commits</div>`;
+        const authors = {}; repoCommits.forEach(c => authors[c.author] = (authors[c.author]||0)+1);
+        const al = Object.entries(authors).sort((a,b)=>b[1]-a[1]);
+        if (al.length) { h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">'; al.forEach(([a,cnt]) => { h += `<span class="week-chip clickable" onclick="showAuthorCommits('${esc(a)}','month')">${esc(a)}: <strong>${cnt}</strong></span>`; }); h += '</div>'; }
+        const daily = {}; repoCommits.forEach(c => daily[c.date]=(daily[c.date]||0)+1);
+        const dl = Object.entries(daily).sort((a,b)=>a[0].localeCompare(b[0]));
+        if (dl.length > 1) { const mx = Math.max(...dl.map(d=>d[1])); h += '<div style="margin-bottom:8px;">'; dl.forEach(([date,count]) => { h += `<div class="daily-row"><span class="daily-date">${date}</span><div class="daily-bar" style="width:${Math.max(Math.round(count/mx*250),20)}px;">${count}</div></div>`; }); h += '</div>'; }
+        h += '<table><thead><tr><th style="width:5%;">#</th><th style="width:15%;text-align:left;">Branch</th><th style="width:8%;">Hash</th><th style="width:10%;">Date</th><th style="width:18%;text-align:left;">Author</th><th style="width:44%;text-align:left;">Message</th></tr></thead><tbody>';
+        repoCommits.forEach((c,i) => { h += `<tr class="${i%2?'alt':''}"><td style="text-align:center;">${i+1}</td><td class="code-yes">${esc(c.branch)}</td><td style="text-align:center;font-family:monospace;font-size:8px;">${esc(c.hash)}</td><td style="text-align:center;">${esc(c.date)}</td><td><span class="author-link" onclick="showAuthorCommits('${esc(c.author)}','month')">${esc(c.author)}</span></td><td style="font-size:8.5px;">${esc(c.message)}</td></tr>`; });
+        h += '</tbody></table>';
+    } else { h += '<div class="section-title">Recent Commits</div><div style="font-size:10px;color:#888;">No commits in the last 30 days.</div>'; }
+    openPanel(repoName, h);
+}
+
+/* ====== SHOW AUTHOR COMMITS ====== */
+function showAuthorCommits(authorName, period) {
+    if (!authorName) return;
+    const source = period === 'today' ? report.today : (period === 'week' ? report.last_week : report.last_month);
+    const periodLabel = period === 'today' ? 'Today' : (period === 'week' ? 'Last 7 Days' : 'Last 30 Days');
+    const commits = source.commits.filter(c => c.author === authorName);
+    let h = `<div style="font-size:11px;color:#666;margin-bottom:10px;">Showing commits for <strong>${periodLabel}</strong></div>`;
+    h += `<div class="panel-stat-row"><div class="panel-stat"><div class="pval">${commits.length}</div><div class="plbl">Commits</div></div><div class="panel-stat"><div class="pval">${new Set(commits.map(c=>c.repo)).size}</div><div class="plbl">Repos</div></div><div class="panel-stat"><div class="pval">${new Set(commits.map(c=>c.branch)).size}</div><div class="plbl">Branches</div></div></div>`;
+    const rc = {}; commits.forEach(c => rc[c.repo]=(rc[c.repo]||0)+1);
+    const rl = Object.entries(rc).sort((a,b)=>b[1]-a[1]);
+    if (rl.length) { h += '<div class="section-title">Repos Contributed To</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'; rl.forEach(([repo,cnt]) => { h += `<span class="week-chip clickable" onclick="showRepoDetail('${esc(repo)}')">${esc(repo)}: <strong>${cnt}</strong></span>`; }); h += '</div>'; }
+    const daily = {}; commits.forEach(c => daily[c.date]=(daily[c.date]||0)+1);
+    const dl = Object.entries(daily).sort((a,b)=>a[0].localeCompare(b[0]));
+    if (dl.length > 1) { const mx = Math.max(...dl.map(d=>d[1])); h += '<div class="section-title">Daily Activity</div><div style="margin-bottom:8px;">'; dl.forEach(([date,count]) => { h += `<div class="daily-row"><span class="daily-date">${date}</span><div class="daily-bar" style="width:${Math.max(Math.round(count/mx*250),20)}px;">${count}</div></div>`; }); h += '</div>'; }
+    h += '<div class="section-title">All Commits</div><table><thead><tr><th style="width:4%;">#</th><th style="width:18%;text-align:left;">Repository</th><th style="width:14%;text-align:left;">Branch</th><th style="width:7%;">Hash</th><th style="width:9%;">Date</th><th style="width:48%;text-align:left;">Message</th></tr></thead><tbody>';
+    commits.forEach((c,i) => { h += `<tr class="${i%2?'alt':''}"><td style="text-align:center;">${i+1}</td><td><span class="author-link" onclick="showRepoDetail('${esc(c.repo)}')">${esc(c.repo)}</span></td><td class="code-yes">${esc(c.branch)}</td><td style="text-align:center;font-family:monospace;font-size:8px;">${esc(c.hash)}</td><td style="text-align:center;">${esc(c.date)}</td><td style="font-size:8.5px;">${esc(c.message)}</td></tr>`; });
+    h += '</tbody></table>';
+    const tc = report.today.commits.filter(c=>c.author===authorName).length;
+    const wc = report.last_week.commits.filter(c=>c.author===authorName).length;
+    const mc = report.last_month.commits.filter(c=>c.author===authorName).length;
+    h += '<div style="margin-top:10px;font-size:10px;display:flex;gap:12px;">';
+    if (period !== 'today' && tc) h += `<span class="author-link" onclick="showAuthorCommits('${esc(authorName)}','today')">Today (${tc})</span>`;
+    if (period !== 'week' && wc) h += `<span class="author-link" onclick="showAuthorCommits('${esc(authorName)}','week')">Last 7 days (${wc})</span>`;
+    if (period !== 'month' && mc > commits.length) h += `<span class="author-link" onclick="showAuthorCommits('${esc(authorName)}','month')">Last 30 days (${mc})</span>`;
+    h += '</div>';
+    openPanel(authorName + ' - Commits', h);
+}
+
+/* ====== SHOW COMMIT SUMMARY DETAIL ====== */
+function showCommitSummaryDetail(type, period) {
+    const source = period === 'today' ? report.today : (period === 'week' ? report.last_week : report.last_month);
+    const periodLabel = period === 'today' ? 'Today' : (period === 'week' ? 'Last 7 Days' : 'Last 30 Days');
+    let h = '';
+    if (type === 'commits') {
+        h += `<div style="font-size:11px;color:#666;margin-bottom:10px;">All commits for <strong>${periodLabel}</strong></div>`;
+        h += `<div class="panel-stat-row"><div class="panel-stat"><div class="pval">${source.total_commits}</div><div class="plbl">Total Commits</div></div><div class="panel-stat"><div class="pval">${source.active_repos_count}</div><div class="plbl">Active Repos</div></div><div class="panel-stat"><div class="pval">${source.authors.length}</div><div class="plbl">Contributors</div></div></div>`;
+        if (source.daily.length) { const mx=Math.max(...source.daily.map(d=>d[1])); h+='<div class="section-title">Daily Breakdown</div>'; source.daily.forEach(([date,count])=>{h+=`<div class="daily-row"><span class="daily-date">${date}</span><div class="daily-bar" style="width:${Math.max(Math.round(count/mx*300),20)}px;">${count}</div></div>`;}); h+='<div style="height:10px;"></div>'; }
+        h += '<table><thead><tr><th style="width:3%;">#</th><th style="width:16%;text-align:left;">Repository</th><th style="width:12%;text-align:left;">Branch</th><th style="width:6%;">Hash</th><th style="width:8%;">Date</th><th style="width:13%;text-align:left;">Author</th><th style="width:42%;text-align:left;">Message</th></tr></thead><tbody>';
+        source.commits.forEach((c,i)=>{h+=`<tr class="${i%2?'alt':''}"><td style="text-align:center;">${i+1}</td><td><span class="author-link" onclick="showRepoDetail('${esc(c.repo)}')">${esc(c.repo)}</span></td><td class="code-yes">${esc(c.branch)}</td><td style="text-align:center;font-family:monospace;font-size:8px;">${esc(c.hash)}</td><td style="text-align:center;">${esc(c.date)}</td><td><span class="author-link" onclick="showAuthorCommits('${esc(c.author)}','${period}')">${esc(c.author)}</span></td><td style="font-size:8.5px;">${esc(c.message)}</td></tr>`;});
+        h += '</tbody></table>';
+        openPanel(`Total Commits - ${periodLabel} (${source.total_commits})`, h);
+    } else if (type === 'repos') {
+        h += `<div style="font-size:11px;color:#666;margin-bottom:10px;">Repositories with activity for <strong>${periodLabel}</strong></div>`;
+        h += `<div class="panel-stat-row"><div class="panel-stat"><div class="pval">${source.active_repos_count}</div><div class="plbl">Active Repos</div></div></div>`;
+        if (source.per_repo.length) { const mx=source.per_repo[0][1]; h+='<table><thead><tr><th style="text-align:left;">Repository</th><th>Commits</th><th>Activity</th></tr></thead><tbody>'; source.per_repo.forEach(([repo,count],i)=>{h+=`<tr class="${i%2?'alt':''}"><td><span class="author-link" onclick="showRepoDetail('${esc(repo)}')">${esc(repo)}</span></td><td style="text-align:center;font-weight:bold;">${count}</td><td style="padding:3px 4px;"><div style="background:rgb(41,65,122);height:14px;width:${Math.min(Math.round(count/mx*220),220)}px;border-radius:2px;color:white;font-size:8px;line-height:14px;padding:0 4px;text-align:right;">${count}</div></td></tr>`;}); h+='</tbody></table>'; }
+        openPanel(`Active Repos - ${periodLabel} (${source.active_repos_count})`, h);
+    } else if (type === 'authors') {
+        h += `<div style="font-size:11px;color:#666;margin-bottom:10px;">Contributors for <strong>${periodLabel}</strong></div>`;
+        h += `<div class="panel-stat-row"><div class="panel-stat"><div class="pval">${source.authors.length}</div><div class="plbl">Contributors</div></div></div>`;
+        if (source.authors.length) { const mx=source.authors[0][1]; h+='<table><thead><tr><th style="text-align:left;">Developer</th><th>Commits</th><th>Activity</th></tr></thead><tbody>'; source.authors.forEach(([author,count],i)=>{h+=`<tr class="${i%2?'alt':''}"><td><span class="author-link" onclick="showAuthorCommits('${esc(author)}','${period}')">${esc(author)}</span></td><td style="text-align:center;font-weight:bold;">${count}</td><td style="padding:3px 4px;"><div style="background:rgb(46,139,87);height:14px;width:${Math.min(Math.round(count/mx*220),220)}px;border-radius:2px;color:white;font-size:8px;line-height:14px;padding:0 4px;text-align:right;">${count}</div></td></tr>`;}); h+='</tbody></table>'; }
+        openPanel(`Contributors - ${periodLabel} (${source.authors.length})`, h);
+    }
+}
+
+/* ====== SHOW SUMMARY DETAIL ====== */
+function showSummaryDetail(type) {
+    let items = [], title = '';
+    if (type === 'total') { title = 'All Repositories'; items = report.repos; }
+    else if (type === 'withcode') { title = 'Repositories With Code'; items = report.repos.filter(r => r.branches.some(b => b.has_code === 'YES')); }
+    else if (type === 'empty') { title = 'Empty Repositories'; items = report.repos.filter(r => !r.branches.some(b => b.has_code === 'YES')); }
+    else if (type === 'inuse') { title = 'In Use Repositories'; items = report.repos.filter(r => r.usage === 'In Use'); }
+    else if (type === 'notinuse') { title = 'Not In Use Repositories'; items = report.repos.filter(r => r.usage === 'Not In Use'); }
+    let h = `<div class="panel-stat-row"><div class="panel-stat"><div class="pval">${items.length}</div><div class="plbl">Repos</div></div></div>`;
+    h += '<table><thead><tr><th style="text-align:left;">Repository</th><th>Branches</th><th>With Code</th><th>Usage</th></tr></thead><tbody>';
+    items.forEach((r,i) => {
+        const cc = r.branches.filter(b=>b.has_code==='YES').length;
+        h += `<tr class="${i%2?'alt':''}"><td><span class="author-link" onclick="showRepoDetail('${esc(r.name)}')">${esc(r.name)}</span></td><td style="text-align:center;">${r.branches.length}</td><td style="text-align:center;">${cc}</td><td style="text-align:center;background:${r.usage==='In Use'?'rgb(220,240,220)':'rgb(255,200,200)'};">${r.usage}</td></tr>`;
+    });
+    h += '</tbody></table>';
+    openPanel(title + ' (' + items.length + ')', h);
+}
+
+/* ====== RENDER COMMIT SECTION ====== */
+function renderCommitSection(data, sinceDateStr, period) {
+    const barClass = period === 'week' ? '' : ' month-bar';
+    let h = `<div style="font-size:10px;color:#444;margin-bottom:10px;">Commits since ${esc(sinceDateStr)}</div>
+    <div class="summary-boxes" style="margin-bottom:4px;">
+        <div class="summary-box green clickable" style="width:120px;height:40px;font-size:20px;" onclick="showCommitSummaryDetail('commits','${period}')">${data.total_commits}</div>
+        <div class="summary-box blue clickable" style="width:120px;height:40px;font-size:20px;" onclick="showCommitSummaryDetail('repos','${period}')">${data.active_repos_count}</div>
+        <div class="summary-box teal clickable" style="width:120px;height:40px;font-size:20px;" onclick="showCommitSummaryDetail('authors','${period}')">${data.authors.length}</div>
+    </div>
+    <div class="summary-labels" style="margin-bottom:12px;">
+        <div class="summary-label" style="width:120px;">Total Commits</div>
+        <div class="summary-label" style="width:120px;">Active Repos</div>
+        <div class="summary-label" style="width:120px;">Contributors</div>
+    </div>`;
+    // Daily chart
+    if (data.daily && data.daily.length) {
+        const maxD = Math.max(...data.daily.map(d => d[1]));
+        h += '<div class="section-title" style="font-size:11px;">Daily Commit Activity</div>';
+        data.daily.forEach(([date, count]) => { h += `<div class="daily-row"><span class="daily-date">${esc(date)}</span><div class="daily-bar${barClass}" style="width:${Math.max(Math.round(count/maxD*300),20)}px;">${count}</div></div>`; });
+        h += '<div style="height:10px;"></div>';
+    }
+    // Developer activity
+    if (data.authors.length) {
+        const maxA = data.authors[0][1];
+        h += `<div class="section-title" style="font-size:11px;">Developer Activity <span style="font-weight:normal;font-size:9px;color:#666;">(click name to see commits)</span></div><table style="width:500px;margin-bottom:10px;"><thead><tr><th style="text-align:left;">Developer</th><th>Commits</th><th>Activity</th></tr></thead><tbody>`;
+        data.authors.forEach(([author, count]) => { h += `<tr><td><span class="author-link" onclick="showAuthorCommits('${esc(author)}','${period}')">${esc(author)}</span></td><td style="text-align:center;font-weight:bold;">${count}</td><td style="padding:3px 4px;"><div style="background:rgb(46,139,87);height:12px;width:${Math.min(Math.round(count/maxA*220),220)}px;border-radius:2px;"></div></td></tr>`; });
+        h += '</tbody></table>';
+    }
+    // Per-repo
+    if (data.per_repo && data.per_repo.length) {
+        const maxR = data.per_repo[0][1];
+        h += `<div class="section-title" style="font-size:11px;">Commits Per Repository <span style="font-weight:normal;font-size:9px;color:#666;">(click to see details)</span></div><table style="width:500px;margin-bottom:10px;"><thead><tr><th style="text-align:left;">Repository</th><th>Commits</th><th>Activity</th></tr></thead><tbody>`;
+        data.per_repo.forEach(([repo, count]) => { h += `<tr><td><span class="author-link" onclick="showRepoDetail('${esc(repo)}')">${esc(repo)}</span></td><td style="text-align:center;font-weight:bold;">${count}</td><td style="padding:3px 4px;"><div style="background:rgb(41,65,122);height:12px;width:${Math.min(Math.round(count/maxR*220),220)}px;border-radius:2px;"></div></td></tr>`; });
+        h += '</tbody></table>';
+    }
+    // Active repos chips
+    if (data.active_repos.length) {
+        h += `<div class="section-title" style="font-size:11px;">Repos With Activity <span style="font-weight:normal;font-size:9px;color:#666;">(click to see project details)</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">`;
+        data.active_repos.forEach(r => { h += `<span class="week-chip clickable" onclick="showRepoDetail('${esc(r)}')">${esc(r)}</span>`; });
+        h += '</div>';
+    }
+    // Commit log
+    const tid = period + 'Table';
+    h += '<div class="section-title" style="font-size:11px;">Commit Log</div>';
+    if (data.commits.length) {
+        h += `<div class="filter-bar"><input type="text" class="search-input" placeholder="Search commits..." oninput="filterCT('${tid}',this.value)"></div>
+        <div style="max-height:350px;overflow-y:auto;border:0.5px solid #ccc;border-radius:4px;"><table id="${tid}"><thead><tr>
+            <th style="width:3%;">#</th><th style="width:14%;text-align:left;">Repository</th><th style="width:11%;text-align:left;">Branch</th><th style="width:6%;">Hash</th><th style="width:7%;">Date</th><th style="width:12%;text-align:left;">Author</th><th style="width:47%;text-align:left;">Commit Message</th>
+        </tr></thead><tbody>`;
+        data.commits.forEach((c, i) => {
+            h += `<tr class="${i%2?'alt':''}" data-s="${esc(c.repo+' '+c.author+' '+c.message)}">
+                <td style="text-align:center;">${i+1}</td><td><span class="author-link" onclick="showRepoDetail('${esc(c.repo)}')">${esc(c.repo)}</span></td><td class="code-yes">${esc(c.branch)}</td>
+                <td style="text-align:center;font-family:monospace;font-size:8px;">${esc(c.hash)}</td><td style="text-align:center;">${esc(c.date)}</td>
+                <td><span class="author-link" onclick="showAuthorCommits('${esc(c.author)}','${period}')">${esc(c.author)}</span></td><td style="font-size:8.5px;">${esc(c.message)}</td></tr>`;
+        });
+        h += '</tbody></table></div>';
+    } else { h += '<div style="font-size:11px;color:#888;padding:20px;text-align:center;">No commits found.</div>'; }
+    return h;
+}
+
+/* ====== MAIN RENDER ====== */
+function render() {
+    const r = report, s = r.summary, a = r.activity;
+    let html = '';
+
+    // PAGE 1: OVERVIEW
+    html += `<div class="page">
+        <div class="report-title">GMEBiz Repository Branch Report (Remote)</div>
+        <div class="report-meta">Generated: ${esc(r.generated_at)} &nbsp;|&nbsp; Source: Bitbucket (origin remote) &nbsp;|&nbsp; Auto-refresh: daily at 9:30 AM</div>
+        <div class="section-title">Overview</div>
+        <div class="summary-boxes">
+            <div class="summary-box blue clickable" onclick="showSummaryDetail('total')">${s.total_repos}</div>
+            <div class="summary-box green clickable" onclick="showSummaryDetail('withcode')">${s.with_code}</div>
+            <div class="summary-box red clickable" onclick="showSummaryDetail('empty')">${s.empty}</div>
+            <div class="summary-box teal clickable" onclick="showSummaryDetail('inuse')">${s.in_use}</div>
+            <div class="summary-box brown clickable" onclick="showSummaryDetail('notinuse')">${s.not_in_use}</div>
+        </div>
+        <div class="summary-labels"><div class="summary-label">Total Repos</div><div class="summary-label">Repos With Code</div><div class="summary-label">Empty Repos</div><div class="summary-label">In Use</div><div class="summary-label">Not In Use</div></div>
+        <div class="section-title">Branch Activity Summary (based on last commit date on Bitbucket)</div>
+        <div class="activity-row">
+            <div class="activity-pill ap-active clickable" onclick="showActivityList('Active')">Active: ${a.Active}</div>
+            <div class="activity-pill ap-moderate clickable" onclick="showActivityList('Moderate')">Moderate: ${a.Moderate}</div>
+            <div class="activity-pill ap-stale clickable" onclick="showActivityList('Stale')">Stale: ${a.Stale}</div>
+            <div class="activity-pill ap-inactive clickable" onclick="showActivityList('Inactive')">Inactive: ${a.Inactive}</div>
+        </div>
+        <div class="activity-legend">Active: &lt;30 days | Moderate: 30-90 days | Stale: 90-180 days | Inactive: &gt;180 days &nbsp;|&nbsp; <em>Click to see list</em></div>`;
+    if (r.empty_repos.length) { html += `<div class="section-title">Repos With No Code (${r.empty_repos.length})</div>`; r.empty_repos.forEach(n => { html += `<div style="font-size:10px;margin-left:12px;">- ${esc(n)}</div>`; }); html += '<div style="height:10px;"></div>'; }
+    if (r.no_main_code.length) {
+        html += `<div class="section-title">Repos Where main/master Is Empty (${r.no_main_code.length})</div><table class="empty-main-table"><thead><tr><th>Repository</th><th>Best Branch</th><th>Files</th></tr></thead><tbody>`;
+        r.no_main_code.forEach(i => { html += `<tr class="clickable" onclick="showRepoDetail('${esc(i.repo)}')"><td>${esc(i.repo)}</td><td style="background:rgb(220,240,220);text-align:center;">${esc(i.branch)}</td><td style="background:rgb(220,240,220);text-align:center;">${i.files}</td></tr>`; });
+        html += '</tbody></table>';
+    }
+    html += '<div class="page-footer">Page 1</div></div>';
+
+    // PAGE 2: COMMIT HISTORY
+    html += `<div class="page">
+        <div class="section-title" style="font-size:16px;margin-bottom:4px;">Commit &amp; Push History</div>
+        <div class="period-tabs"><button class="period-tab active" onclick="switchP('today',this)">Today</button><button class="period-tab" onclick="switchP('week',this)">Last 7 Days</button><button class="period-tab" onclick="switchP('month',this)">Last 30 Days</button></div>
+        <div id="p-today" style="display:block;">${renderCommitSection(r.today, r.today_since, 'today')}</div>
+        <div id="p-week" style="display:none;">${renderCommitSection(r.last_week, r.week_since, 'week')}</div>
+        <div id="p-month" style="display:none;">${renderCommitSection(r.last_month, r.month_since, 'month')}</div>
+        <div class="page-footer">Page 2</div></div>`;
+
+    // PAGE 3: DETAILED TABLE
+    html += `<div class="page" id="page-detailed">
+        <div class="section-title" style="font-size:16px;margin-bottom:8px;">Detailed Branch Report (Bitbucket Remote)</div>
+        <div class="filter-bar">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search repos or branches..." oninput="filterTable()">
+            <button class="filter-btn active" data-filter="all" onclick="filterAct(this,'all')">All</button>
+            <button class="filter-btn" data-filter="Active" onclick="filterAct(this,'Active')">Active</button>
+            <button class="filter-btn" data-filter="Moderate" onclick="filterAct(this,'Moderate')">Moderate</button>
+            <button class="filter-btn" data-filter="Stale" onclick="filterAct(this,'Stale')">Stale</button>
+            <button class="filter-btn" data-filter="Inactive" onclick="filterAct(this,'Inactive')">Inactive</button>
+        </div>
+        <table class="detail-table" id="reportTable"><thead><tr><th>#</th><th>Repository</th><th>Branch</th><th>Files</th><th>Code?</th><th>Last Commit</th><th>Author</th><th>Commits</th><th>Port</th><th>Activity</th><th>Usage</th></tr></thead><tbody>`;
+    let rowNum = 0;
+    r.repos.forEach(repo => {
+        rowNum++;
+        repo.branches.forEach((b, bi) => {
+            const cls = rowNum % 2 === 0 ? 'alt' : '';
+            html += `<tr class="${cls}" data-repo="${esc(repo.name)}" data-branch="${esc(b.name)}" data-activity="${b.activity}">
+                <td style="text-align:center;">${bi===0?rowNum:''}</td>
+                <td>${bi===0?`<span class="author-link" onclick="showRepoDetail('${esc(repo.name)}')">${esc(repo.name)}</span>`:''}</td>
+                <td class="${b.has_code==='YES'?'code-yes':'code-no'}">${esc(b.name)}</td>
+                <td class="${b.has_code==='YES'?'code-yes':'code-no'}" style="text-align:center;">${b.files}</td>
+                <td class="${b.has_code==='YES'?'code-yes':'code-no'}" style="text-align:center;">${b.has_code}</td>
+                <td style="text-align:center;">${esc(b.last_date)}</td>
+                <td><span class="author-link" onclick="showAuthorCommits('${esc(b.last_author)}','month')">${esc((b.last_author||'').substring(0,24))}</span></td>
+                <td style="text-align:center;">${esc(b.commits)}</td><td style="text-align:center;">${esc(b.port)}</td>
+                <td class="act-${b.activity.toLowerCase()} clickable" onclick="showActivityList('${b.activity}')">${b.activity}</td>
+                <td class="${repo.usage==='In Use'?'usage-inuse':'usage-notinuse'}">${bi===0?repo.usage:''}</td></tr>`;
+        });
+    });
+    html += `</tbody></table>
+        <div class="legend"><div class="legend-box has-code"></div><span>Has code</span><div class="legend-box no-code"></div><span>Empty</span><span style="margin-left:16px;"></span>
+            <div class="legend-pill" style="background:rgb(46,139,87);">Active</div><div class="legend-pill" style="background:rgb(184,134,11);">Moderate</div><div class="legend-pill" style="background:rgb(205,133,63);">Stale</div><div class="legend-pill" style="background:rgb(178,34,34);">Inactive</div></div>
+        <div class="legend-note">All data sourced from Bitbucket remote (origin). No local changes included.</div>
+        <div class="page-footer">Page 3</div></div>`;
+
+    // PAGE 4: RECOMMENDATIONS TABLE
+    const rec = r.recommendations; let sn = 0;
+    function recRow(title, pri, count, detailHtml, alt) {
+        sn++;
+        return `<tr class="${alt?'alt':''}">
+            <td style="text-align:center;font-weight:bold;vertical-align:middle;">${sn}</td>
+            <td style="font-weight:bold;white-space:normal;word-break:break-word;vertical-align:top;padding:6px;">${title}</td>
+            <td style="text-align:center;vertical-align:middle;"><span class="priority-badge ${pri}" style="display:inline-block;padding:2px 10px;font-size:9px;font-weight:700;border-radius:3px;">${pri.toUpperCase()}</span></td>
+            <td style="text-align:center;font-weight:bold;vertical-align:middle;">${count}</td>
+            <td style="white-space:normal;word-break:break-word;vertical-align:top;padding:6px;font-size:9px;">${detailHtml}</td></tr>`;
+    }
+    html += `<div class="page"><div class="report-title" style="font-size:17px;">Recommendations &amp; Action Items for Developers</div><div style="height:10px;"></div>
+        <table style="table-layout:auto;"><thead><tr>
+            <th style="width:3%;text-align:center;">#</th>
+            <th style="width:25%;text-align:left;">Recommendation</th>
+            <th style="width:8%;text-align:center;">Priority</th>
+            <th style="width:8%;text-align:center;">Count</th>
+            <th style="width:56%;text-align:left;">Details / Action Items</th>
+        </tr></thead><tbody>`;
+    let alt = false;
+    if (rec.empty_main_repos.length) { html += recRow('Merge Code into main/master Branch', 'high', rec.empty_main_repos.length, rec.empty_main_repos.map(i => `<div style="margin-bottom:2px;"><span class="author-link" onclick="showRepoDetail('${esc(i.repo)}')">${esc(i.repo)}</span> &rarr; merge "${esc(i.branch)}" into main</div>`).join(''), alt); alt=!alt; }
+    if (rec.inactive_repos.length) { html += recRow('Review Inactive Repositories (&gt;180 days)', 'high', rec.inactive_repos.length, rec.inactive_repos.map(i => `<span class="author-link" onclick="showRepoDetail('${esc(i)}')" style="margin-right:8px;">${esc(i)}</span>`).join(''), alt); alt=!alt; }
+    if (rec.no_code_repos.length) { html += recRow('Remove or Initialize Empty Repositories', 'medium', rec.no_code_repos.length, rec.no_code_repos.map(i => `<span style="margin-right:8px;">${esc(i)}</span>`).join(''), alt); alt=!alt; }
+    if (rec.stale_repos.length) { html += recRow('Update Stale Repositories (90-180 days)', 'medium', rec.stale_repos.length, rec.stale_repos.map(i => `<span class="author-link" onclick="showRepoDetail('${esc(i)}')" style="margin-right:8px;">${esc(i)}</span>`).join(''), alt); alt=!alt; }
+    if (rec.non_standard.length) { html += recRow('Standardize Branching Strategy', 'medium', rec.non_standard.length, rec.non_standard.map(i => `<div style="margin-bottom:2px;">${esc(i.repo)} uses "${esc(i.branch)}" &rarr; rename to "main"</div>`).join(''), alt); alt=!alt; }
+    if (rec.feature_branches.length) { html += recRow('Clean Up Feature Branches', 'low', rec.feature_branches.length, rec.feature_branches.map(i => `<div style="margin-bottom:2px;"><span class="author-link" onclick="showRepoDetail('${esc(i.repo)}')">${esc(i.repo)}</span> / ${esc(i.branch)} (${esc(i.last_date)}, ${i.activity})</div>`).join(''), alt); alt=!alt; }
+    if (rec.no_port_repos.length) { html += recRow('Verify Port Configuration', 'low', rec.no_port_repos.length, rec.no_port_repos.map(i => `<span style="margin-right:8px;">${esc(i)}</span>`).join(''), alt); alt=!alt; }
+    sn++;
+    html += `<tr class="${alt?'alt':''}"><td style="text-align:center;font-weight:bold;vertical-align:middle;">${sn}</td><td style="font-weight:bold;white-space:normal;vertical-align:top;padding:6px;">General Best Practices</td><td style="text-align:center;vertical-align:middle;"><span class="priority-badge ongoing" style="display:inline-block;padding:2px 10px;font-size:9px;font-weight:700;border-radius:3px;">ONGOING</span></td><td style="text-align:center;vertical-align:middle;">-</td><td style="white-space:normal;word-break:break-word;vertical-align:top;padding:6px;font-size:9px;">Enable branch protection on main/master &bull; Require PR reviews &bull; Set up CI/CD pipelines &bull; Add README.md to every repo &bull; Tag releases (v1.0.0) &bull; Prune merged branches &bull; Proper logging and health checks &bull; Document API contracts</td></tr>`;
+    html += '</tbody></table><div class="page-footer">Page 4</div></div>';
+    document.getElementById('app').innerHTML = html;
+}
+
+/* ====== UTILITY FUNCTIONS ====== */
+function switchP(period, btn) {
+    document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('p-today').style.display = period === 'today' ? 'block' : 'none';
+    document.getElementById('p-week').style.display = period === 'week' ? 'block' : 'none';
+    document.getElementById('p-month').style.display = period === 'month' ? 'block' : 'none';
+}
+function filterCT(tableId, q) { q = q.toLowerCase(); document.querySelectorAll('#'+tableId+' tbody tr').forEach(row => { row.style.display = (!q || (row.dataset.s||'').toLowerCase().includes(q)) ? '' : 'none'; }); }
+function filterTable() {
+    const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    const f = document.querySelector('.filter-btn.active')?.dataset?.filter || 'all';
+    document.querySelectorAll('#reportTable tbody tr').forEach(row => {
+        const repo = (row.dataset.repo||'').toLowerCase(), branch = (row.dataset.branch||'').toLowerCase(), activity = row.dataset.activity||'';
+        row.style.display = ((!q || repo.includes(q) || branch.includes(q)) && (f === 'all' || activity === f)) ? '' : 'none';
+    });
+}
+function filterAct(btn, f) { document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); filterTable(); }
+
+async function loadReport() {
+    try {
+        const resp = await fetch('/api/report');
+        if (!resp.ok) { document.getElementById('app').innerHTML = `<div class="page"><div class="loading"><b style="font-size:18px;color:#29417a;">No Report Available</b><br><br>Click "Refresh Now" to generate.</div></div>`; return; }
+        report = await resp.json();
+        document.getElementById('lastGen').textContent = 'Generated: ' + report.generated_at;
+        render(); loadHistoryDates();
+    } catch (err) { document.getElementById('app').innerHTML = `<div class="page"><div class="loading">Error: ${err.message}</div></div>`; }
+}
+async function loadHistory(date) {
+    if (!date) { document.getElementById('reportDatePicker').value = ''; loadReport(); return; }
+    document.getElementById('spinner').style.display = 'block';
+    try {
+        const resp = await fetch('/api/report?date=' + date);
+        if (resp.ok) { report = await resp.json(); document.getElementById('lastGen').textContent = 'Viewing: ' + date; render(); }
+        else { alert('No report found for ' + date + '. Reports are only available for dates when they were generated.'); document.getElementById('reportDatePicker').value = ''; }
+    } catch (e) { alert('Error: ' + e.message); }
+    document.getElementById('spinner').style.display = 'none';
+}
+function downloadPDF() {
+    closePanel();
+
+    // Expand scrollable areas
+    const scrollDivs = document.querySelectorAll('[style*="max-height"]');
+    const origStyles = [];
+    scrollDivs.forEach(d => { origStyles.push(d.style.cssText); d.style.maxHeight = 'none'; d.style.overflow = 'visible'; });
+
+    // Hide top bar
+    const refreshBar = document.querySelector('.refresh-bar');
+    if (refreshBar) refreshBar.style.display = 'none';
+
+    // Clone only visible content (active tab only)
+    const pages = document.querySelectorAll('.page');
+    const container = document.createElement('div');
+    container.id = 'pdf-container';
+    pages.forEach(p => {
+        const clone = p.cloneNode(true);
+        // Remove hidden period sections
+        clone.querySelectorAll('[id^="p-"]').forEach(el => {
+            if (el.style.display === 'none') el.remove();
+        });
+        // Remove period tabs and filter bars
+        clone.querySelectorAll('.period-tabs').forEach(el => el.remove());
+        clone.querySelectorAll('.filter-bar').forEach(el => el.remove());
+        // Fix overflow for PDF — prevent clipping
+        clone.style.overflow = 'visible';
+        clone.style.width = '285mm';
+        clone.style.padding = '8px 6mm';
+        clone.querySelectorAll('td').forEach(td => { td.style.whiteSpace = 'normal'; td.style.wordBreak = 'break-word'; td.style.overflow = 'visible'; });
+        clone.querySelectorAll('table').forEach(t => { t.style.tableLayout = 'auto'; t.style.width = '100%'; });
+        container.appendChild(clone);
+    });
+    document.body.appendChild(container);
+
+    const activeTab = document.querySelector('.period-tab.active');
+    const periodLabel = activeTab ? activeTab.textContent.trim().replace(/\s+/g, '_') : 'Report';
+    const dateStr = report.generated_at ? report.generated_at.substring(0, 10) : new Date().toISOString().substring(0, 10);
+
+    const opt = {
+        margin: [4, 4, 4, 4],
+        filename: `GMEBiz_Report_${dateStr}_${periodLabel}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0, width: 1122 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        pagebreak: { mode: ['css', 'legacy'], before: '.page' }
+    };
+
+    html2pdf().set(opt).from(container).save().then(() => {
+        document.body.removeChild(container);
+        if (refreshBar) refreshBar.style.display = '';
+        scrollDivs.forEach((d, i) => d.style.cssText = origStyles[i]);
+    });
+}
+
+async function refreshReport() {
+    const btn = document.getElementById('refreshBtn'), spinner = document.getElementById('spinner');
+    btn.disabled = true; btn.textContent = 'Generating...'; spinner.style.display = 'block';
+    try {
+        await fetch('/api/generate', { method: 'POST' });
+        const oldTs = report?.generated_at || '';
+        const poll = setInterval(async () => { try { const resp = await fetch('/api/report'); if (resp.ok) { const data = await resp.json(); if (data.generated_at && data.generated_at !== oldTs) { clearInterval(poll); report = data; document.getElementById('lastGen').textContent = 'Generated: ' + report.generated_at; render(); loadHistoryDates(); btn.disabled = false; btn.textContent = 'Refresh Now'; spinner.style.display = 'none'; } } } catch {} }, 5000);
+        setTimeout(() => { clearInterval(poll); btn.disabled = false; btn.textContent = 'Refresh Now'; spinner.style.display = 'none'; }, 300000);
+    } catch { btn.disabled = false; btn.textContent = 'Refresh Now'; spinner.style.display = 'none'; }
+}
+loadReport();
+</script>
+</body>
+</html>
